@@ -23,3 +23,6 @@ while(count >= 0):
     count -= 1
 
 
+turtle.exitonclick()
+
+
