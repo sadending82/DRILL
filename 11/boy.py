@@ -1,15 +1,22 @@
 from pico2d import *
 
+
+isLeftShiftOn = False
+isRightShiftOn = False
 # Boy Event
-RIGHT_DOWN, LEFT_DOWN, RIGHT_UP, LEFT_UP, SLEEP_TIMER = range(5)
+RIGHT_DOWN, LEFT_DOWN, RIGHT_UP, LEFT_UP, SHIFT_DOWN, SHIFT_UP, SLEEP_TIMER, DASH_TIMER = range(8)
 
 # fill here
 
 key_event_table = {
     (SDL_KEYDOWN, SDLK_RIGHT): RIGHT_DOWN,
     (SDL_KEYDOWN, SDLK_LEFT): LEFT_DOWN,
+    (SDL_KEYDOWN, SDLK_LSHIFT): SHIFT_DOWN,
+    (SDL_KEYDOWN, SDLK_RSHIFT): SHIFT_DOWN,
     (SDL_KEYUP, SDLK_RIGHT): RIGHT_UP,
-    (SDL_KEYUP, SDLK_LEFT): LEFT_UP
+    (SDL_KEYUP, SDLK_LEFT): LEFT_UP,
+    (SDL_KEYUP, SDLK_LSHIFT): SHIFT_UP,
+    (SDL_KEYUP, SDLK_RSHIFT): SHIFT_UP,
 }
 
 
@@ -60,7 +67,6 @@ class RunState:
 
     def do(boy):
         boy.frame = (boy.frame + 1) % 8
-        boy.timer -= 1
         boy.x += boy.velocity
         boy.x = clamp(25, boy.x, 800 - 25)
 
@@ -92,16 +98,68 @@ class SleepState:
             boy.image.clip_composite_draw(boy.frame * 100, 200, 100, 100,
                                           -3.141592 / 2, '', boy.x + 25, boy.y - 25, 100, 100)
 
+
+class DashState:
+
+    def enter(boy, event):
+        if event == SHIFT_DOWN:
+            if boy.velocity == 1:
+                boy.velocity = 2
+            elif boy.velocity == -1:
+                boy.velocity = -2
+        elif event == SHIFT_UP:
+            if boy.velocity == 2:
+                boy.velocity = 1
+            elif boy.velocity == -2:
+                boy.velocity = -1
+
+        if boy.velocity == 1 or boy.velocity == 2:
+            boy.dir = 1
+        elif boy.velocity == -1 or boy.velocity == -2:
+            boy.dir = -1
+        boy.timer = 200
+
+    def exit(boy, event):
+        if boy.velocity > 0:
+            boy.velocity = 1
+        else:
+            boy.velocity = -1
+
+    def do(boy):
+        boy.frame = (boy.frame + 1) % 8
+        boy.timer -= 1
+        if boy.timer == 0:
+            boy.add_event(DASH_TIMER)
+        boy.x += boy.velocity
+        boy.x = clamp(25, boy.x, 800 - 25)
+
+    def draw(boy):
+        if boy.velocity > 0:
+            boy.image.clip_draw(boy.frame * 100, 100, 100, 100, boy.x, boy.y)
+        elif boy.velocity < 0:
+            boy.image.clip_draw(boy.frame * 100, 0, 100, 100, boy.x, boy.y)
+        else:
+            if boy.dir == 1:
+                boy.image.clip_draw(boy.frame * 100, 300, 100, 100, boy.x, boy.y)
+            else:
+                boy.image.clip_draw(boy.frame * 100, 200, 100, 100, boy.x, boy.y)
+
+
 next_state_table = {
     IdleState: {RIGHT_UP: RunState, LEFT_UP: RunState,
                 RIGHT_DOWN: RunState, LEFT_DOWN: RunState,
-                SLEEP_TIMER: SleepState},
+                SLEEP_TIMER: SleepState, SHIFT_DOWN: IdleState,
+                SHIFT_UP: IdleState},
     RunState: {RIGHT_UP: IdleState, LEFT_UP: IdleState,
-               LEFT_DOWN: IdleState, RIGHT_DOWN: IdleState},
+               LEFT_DOWN: IdleState, RIGHT_DOWN: IdleState,
+               SHIFT_DOWN: DashState, SHIFT_UP: DashState},
     SleepState: {LEFT_DOWN: RunState, RIGHT_DOWN: RunState,
-                 LEFT_UP: RunState, RIGHT_UP: RunState}
+                 LEFT_UP: RunState, RIGHT_UP: RunState},
+    DashState: {RIGHT_UP: IdleState, LEFT_UP: IdleState,
+                RIGHT_DOWN: IdleState, LEFT_DOWN: IdleState,
+                SHIFT_UP: DashState, SHIFT_DOWN: DashState,
+                DASH_TIMER: RunState}
 }
-
 
 
 
@@ -137,7 +195,6 @@ class Boy:
     def update(self):
 
         self.cur_state.do(self)
-
         if len(self.event_que) > 0:
             event = self.event_que.pop()
             self.cur_state.exit(self,event)
@@ -146,14 +203,25 @@ class Boy:
 
 
     def draw(self):
+        global isLeftShiftOn, isRightShiftOn
         self.cur_state.draw(self)
-        debug_print('velocity : ' + str(self.velocity))
-        pass
+        debug_print('velocity : ' + str(self.velocity) + ' Event : ' + str(self.cur_state)
+                    + ' LeftShiftOn : ' + str(isLeftShiftOn) + ' RightShiftOn : ' + str(isRightShiftOn))
 
 
     def handle_event(self, event):
+        global isLeftShiftOn, isRightShiftOn
+
+        if event.type == SDL_KEYDOWN and event.key == SDLK_LSHIFT:
+            isLeftShiftOn = True
+        elif event.type == SDL_KEYDOWN and event.key == SDLK_RSHIFT:
+            isRightShiftOn = True
+        elif event.type == SDL_KEYUP and event.key == SDLK_LSHIFT:
+            isLeftShiftOn = False
+        elif event.type == SDL_KEYUP and event.key == SDLK_RSHIFT:
+            isRightShiftOn = False
+
         if(event.type, event.key) in key_event_table:
             key_event = key_event_table[(event.type, event.key)]
             self.add_event(key_event)
-        pass
 
