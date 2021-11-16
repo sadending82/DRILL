@@ -5,9 +5,12 @@ import random
 # Bird Run Speed
 PIXEL_PER_METER = (10.0 / 0.3)  # 10 pixel 30 cm
 # 크기는 Boy에서 이미 지정해 주었기 때문에 모든 월드에서 똑같이 10 pixel 에 30cm 로 설정한다.
+# 따라서 새의 크기는 가로가 100 pixel * 30cm 로 3m,
+# 세로가 100pixel * 30 cm 로 3m이다.
+# 3m * 3m!
 
 RUN_SPEED_KMPH = 60.0  # Km / Hour 60km/h의 속도로 설정한다.
-
+# 키 3m의 새가 60km로 날아간다고 생각하니 조금 무섭긴 하다
 RUN_SPEED_MPM = (RUN_SPEED_KMPH * 1000.0 / 60.0)
 RUN_SPEED_MPS = (RUN_SPEED_MPM / 60.0)
 RUN_SPEED_PPS = (RUN_SPEED_MPS * PIXEL_PER_METER)
