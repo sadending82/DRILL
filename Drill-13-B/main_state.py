@@ -85,6 +85,7 @@ def update():
         if collide(brick, boy):
             boy.y = brick.y + 50
             boy.x = clamp(brick.x - 90, boy.x + game_framework.frame_time * brick.speed, brick.x + 90)
+            boy.x = clamp(50, boy.x, 1600)
 
 
 
